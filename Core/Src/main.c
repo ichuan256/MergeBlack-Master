@@ -54,6 +54,8 @@ extern uint8_t dds_mode;
 // DDS校准因子，不校准时为1
 extern float dds_factor;
 
+double Hz=900;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,7 +110,7 @@ int main(void)
 	Delay_Init();
 	AD9910_Init_1();
 	AD9910_Singal_Profile_Init_1();
-	double Hz=10000;
+//	double Hz=900;
   dds_output_sine(Hz,1,100);
 	
 	
@@ -120,19 +122,25 @@ int main(void)
 	
 	
 	ADF4351_Init(350);
+	ADF4351_SetFreq(Hz);
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		ADF4351_SetFreq(2000);
+		ADF4351_SetFreq(900);
 		
 		if(AD9226_Get_DMA_Complete_Flag()== Collect_complete)
 		{
 			HAL_TIM_DMABurst_MultiReadStart(&htim1,TIM_DMABASE_ARR,TIM_DMA_UPDATE,(uint32_t *)AD9226_Rec_Buf,15,1024);
 			AD9226_Set_DMA_collection_flag(Collect_complete_not);
 		}
+		HAL_Delay(1000);
+	  ADF4351_SetFreq(Hz+=100);
+		//Hz+=100;
+    dds_output_sine(Hz,1,100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
