@@ -4,4 +4,5 @@
 # Keil build output
 MDK-ARM/MergeBlack/
 MDK-ARM/*.uvguix.*
+MDK-ARM/*_build.log
 MDK-ARM/startup_stm32h750xx.lst

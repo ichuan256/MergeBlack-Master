@@ -20,6 +20,7 @@
 #include "main.h"
 #include "dma.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -27,6 +28,8 @@
 #include "AD9226_User.h"
 #include "AD9910_User.h"
 #include "ADF4351_User.h"
+#include "AGC_User.h"
+#include "BoardComm_User.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -105,9 +108,12 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_TIM1_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   //ADF4351_SetFreq(2000);
 	Delay_Init();
+  AGC_Init();
+  BoardComm_Init();
 	AD9910_Init_1();
 	AD9910_Singal_Profile_Init_1();
 //	double Hz=900;
