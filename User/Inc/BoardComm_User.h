@@ -4,46 +4,136 @@
 #include "usart.h"
 
 /*
- * MergeBlack æ¿é—´é€šè®¯ä¸»æœºæ¨¡å—
+ * MergeBlack °å¼ä UART Í¨ĞÅÄ£¿é
+ * ============================================================
+ * 1. Ä£¿éÓÃÍ¾
+ *    ÓÃ USART3 ÊµÏÖÁ½¿é°åÖ®¼äµÄ¼òµ¥Í¨ĞÅ¡£MergeBlack µ±Ç°°´¡°Ö÷»ú¡±Ê¹ÓÃ£¬
+ *    ¿ÉÒÔÖ÷¶¯·¢ËÍÃüÁî£¬Ò²¿ÉÒÔ½ÓÊÕÁíÒ»¿é°å·µ»ØµÄÊı¾İ¡£
  *
- * CubeMX/Keil é…ç½®:
- *   - å¤–è®¾: USART3, Asynchronous
- *   - å¼•è„š: PB10 = USART3_TX, PB11 = USART3_RX
- *   - å‚æ•°: 115200 baud, 8 data bits, no parity, 1 stop bit, no flow control
+ * 2. Ó²¼şÁ¬½Ó
+ *    MergeBlack PB10 / USART3_TX  ->  ¶Ô·½ RX
+ *    MergeBlack PB11 / USART3_RX  <-  ¶Ô·½ TX
+ *    MergeBlack GND               <-> ¶Ô·½ GND
+ *    ×¢Òâ£ºÁ½¶Ë±ØĞëÊÇ 3.3V TTL UART µçÆ½£¬²»ÄÜÖ±½Ó½Ó RS232 µçÆ½¡£
  *
- * æ¿é—´è¿æ¥:
- *   - MergeBlack PB10(TX) -> ä»æœº RX
- *   - MergeBlack PB11(RX) <- ä»æœº TX
- *   - MergeBlack GND      -> ä»æœº GND
- *   - ä¸¤ç«¯ç”µå¹³å‡ä¸º 3.3V TTL UARTï¼Œä¸å¯ç›´æ¥æ¥ RS232 ç”µå¹³
+ * 3. ´®¿Ú²ÎÊı
+ *    USART3£¬115200 bps£¬8 Êı¾İÎ»£¬1 Í£Ö¹Î»£¬ÎŞĞ£Ñé£¬ÎŞÓ²¼şÁ÷¿Ø¡£
  *
- * ä½¿ç”¨æ–¹å¼:
- *   1. main.c ä¸­å…ˆè°ƒç”¨ MX_USART3_UART_Init()
- *   2. å†è°ƒç”¨ BoardComm_Init()
- *   3. ä¸»æœºå‘é€: BoardComm_Send(cmd, data, len)
- *   4. ä¸»æœºæ¥æ”¶: BoardComm_Receive(&cmd, data, &len, timeout)
+ * 4. ½ÓÊÕ·½Ê½
+ *    ±¾Ä£¿éÒÑ¾­¼ÓÈë¡°½ÓÊÕµ½¿ÕÏĞÖĞ¶Ï¡±·½Ê½£º
+ *      HAL_UARTEx_ReceiveToIdle_IT()
+ *    µ±´®¿Ú½ÓÊÕµ½Ò»¶ÎÊı¾İ£¬²¢ÇÒ×ÜÏß¿ÕÏĞ³¬¹ıÔ¼ 1 Ö¡Ê±¼äºó£¬HAL »á´¥·¢
+ *    HAL_UARTEx_RxEventCallback()£¬±¾Ä£¿é»áÔÚ»Øµ÷Àï½âÎöÍêÕûÊı¾İÖ¡¡£
  *
- * å¸§æ ¼å¼:
- *   0xA5 0x5A CMD LEN DATA... CHECKSUM
- *   CHECKSUM = CMD ^ LEN ^ DATA[0] ^ ... ^ DATA[n-1]
+ * 5. main.c ÖĞÍÆ¼öµ÷ÓÃË³Ğò
+ *      MX_USART3_UART_Init();
+ *      BoardComm_Init();
+ *      BoardComm_StartReceiveToIdleIT();
+ *
+ * 6. ÊÕµ½Êı¾İºóµÄÊ¹ÓÃ·½Ê½
+ *    ÓÃ»§Ö»ĞèÒªÔÚ×Ô¼ºµÄ .c ÎÄ¼şÖĞÖØĞ´ BoardComm_RxFrameCallback()£º
+ *      void BoardComm_RxFrameCallback(uint8_t cmd, const uint8_t *data,
+ *                                     uint8_t len, BoardComm_Status status)
+ *      {
+ *          if (status == BOARD_COMM_OK) {
+ *              // ¸ù¾İ cmd ºÍ data ´¦ÀíÒµÎñ
+ *          }
+ *      }
+ *
+ * 7. Ğ­ÒéÖ¡¸ñÊ½
+ *      Byte0      0xA5£¬Ö¡Í· 1
+ *      Byte1      0x5A£¬Ö¡Í· 2
+ *      Byte2      CMD£¬ÃüÁî×Ö
+ *      Byte3      LEN£¬Êı¾İÇø³¤¶È
+ *      Byte4..N   DATA£¬Êı¾İÇø£¬¿ÉÎª¿Õ
+ *      Last       CHECKSUM£¬Ğ£Ñé×Ö½Ú
+ *
+ * 8. Ğ£ÑéËã·¨
+ *      CHECKSUM = CMD ^ LEN ^ DATA[0] ^ DATA[1] ^ ...
  */
 
+/* Ö¡Í·µÚ 1 ×Ö½Ú¡£½ÓÊÕ¶ËÓÃËüÅĞ¶ÏÒ»Ö¡Êı¾İµÄ¿ªÊ¼¡£ */
 #define BOARD_COMM_HEAD1        0xA5
+
+/* Ö¡Í·µÚ 2 ×Ö½Ú¡£Ë«×Ö½ÚÖ¡Í·¿ÉÒÔ½µµÍÎóÅĞ¸ÅÂÊ¡£ */
 #define BOARD_COMM_HEAD2        0x5A
+
+/* µ¥Ö¡×î´óÊı¾İÇø³¤¶È£¬µ¥Î»×Ö½Ú¡£ */
 #define BOARD_COMM_MAX_PAYLOAD  32
+
+/* ½ÓÊÕ»º³åÇø³¤¶È£º2 ×Ö½ÚÖ¡Í· + CMD + LEN + ×î´ó DATA + CHECKSUM¡£ */
+#define BOARD_COMM_RX_BUF_SIZE  (BOARD_COMM_MAX_PAYLOAD + 5U)
+
+/* ×èÈûÊ½·¢ËÍÊ¹ÓÃµÄÄ¬ÈÏ³¬Ê±Ê±¼ä£¬µ¥Î» ms¡£ */
 #define BOARD_COMM_TIMEOUT_MS   20
 
+/*
+ * °å¼äÍ¨ĞÅº¯Êı·µ»ØÖµ¡£
+ * ÕâĞ©×´Ì¬¼ÈÓÃÓÚ×èÈûÊ½ÊÕ·¢£¬Ò²ÓÃÓÚÖĞ¶Ï½ÓÊÕ»Øµ÷ÖĞµÄ½âÎö½á¹û¡£
+ */
 typedef enum {
-  BOARD_COMM_OK = 0,
-  BOARD_COMM_ERROR,
-  BOARD_COMM_TIMEOUT,
-  BOARD_COMM_LENGTH_ERROR,
-  BOARD_COMM_CHECKSUM_ERROR
+  BOARD_COMM_OK = 0,          /* ²Ù×÷³É¹¦£¬»òÊÕµ½µÄÊı¾İÖ¡ºÏ·¨¡£ */
+  BOARD_COMM_ERROR,           /* ²ÎÊı´íÎó¡¢´®¿Ú¾ä±ú´íÎó»òÖ¡Í·´íÎó¡£ */
+  BOARD_COMM_TIMEOUT,         /* ×èÈûÊ½ÊÕ·¢µÈ´ı³¬Ê±¡£ */
+  BOARD_COMM_LENGTH_ERROR,    /* Êı¾İ³¤¶È³¬³öĞ­Òé·¶Î§£¬»òÊÕµ½°ë°ü/Õ³°ü¡£ */
+  BOARD_COMM_CHECKSUM_ERROR   /* Ğ£ÑéÊ§°Ü£¬Êı¾İ¿ÉÄÜ±»¸ÉÈÅ»òĞ­Òé²»Ò»ÖÂ¡£ */
 } BoardComm_Status;
 
+/*
+ * ³õÊ¼»¯°å¼äÍ¨ĞÅÄ£¿é¡£
+ * µ±Ç°ÄÚ²¿°ó¶¨ USART3£¬Ò²¾ÍÊÇ CubeMX Éú³ÉµÄ huart3¡£
+ */
 void BoardComm_Init(void);
+
+/*
+ * Æô¶¯¡°½ÓÊÕµ½¿ÕÏĞÖĞ¶Ï¡±½ÓÊÕ¡£
+ * µ÷ÓÃ³É¹¦ºó£¬USART3 ÊÕµ½Êı¾İ²¢¼ì²âµ½ IDLE ¿ÕÏĞÊ±£¬»á½øÈë HAL »Øµ÷¡£
+ */
+BoardComm_Status BoardComm_StartReceiveToIdleIT(void);
+
+/*
+ * Í£Ö¹ USART3 µÄÖĞ¶Ï½ÓÊÕ¡£
+ * Ò»°ã²»ĞèÒªµ÷ÓÃ£¬Ö»ÓĞÁÙÊ±¹Ø±ÕÍ¨ĞÅ»òÇĞ»»½ÓÊÕ·½Ê½Ê±Ê¹ÓÃ¡£
+ */
+BoardComm_Status BoardComm_StopReceiveIT(void);
+
+/*
+ * ¿ÕÏĞÖĞ¶ÏÊÂ¼ş´¦Àíº¯Êı¡£
+ * ±¾º¯ÊıÓÉ HAL_UARTEx_RxEventCallback() µ÷ÓÃ£¬ÓÃÓÚ½âÎö½ÓÊÕµ½µÄÊı¾İÖ¡¡£
+ * Èç¹ûÒÔºó±ğµÄÎÄ¼şÒ²ÒªÊµÏÖ HAL_UARTEx_RxEventCallback()£¬¼ÇµÃÔÚÀïÃæ
+ * µ÷ÓÃ BoardComm_HandleRxIdleEvent(huart, size)£¬·ñÔò±¾Ä£¿éÊÕ²»µ½Êı¾İ¡£
+ */
+void BoardComm_HandleRxIdleEvent(UART_HandleTypeDef *huart, uint16_t size);
+
+/*
+ * ÓÃ»§½ÓÊÕ»Øµ÷½Ó¿Ú¡£
+ *
+ * ²ÎÊıËµÃ÷£º
+ *   cmd    - ÊÕµ½µÄÃüÁî×Ö¡£
+ *   data   - ÊÕµ½µÄÊı¾İÇøÖ¸Õë¡£×¢ÒâËüÖ¸ÏòÄ£¿éÄÚ²¿½ÓÊÕ»º³åÇø¡£
+ *   len    - Êı¾İÇø³¤¶È¡£
+ *   status - ±¾Ö¡½âÎö×´Ì¬¡£Ö»ÓĞ BOARD_COMM_OK Ê± cmd/data/len ²Å¿É¿¿¡£
+ *
+ * ÖØÒªËµÃ÷£º
+ *   ¸Ãº¯ÊıÔÚ´®¿ÚÖĞ¶ÏÉÏÏÂÎÄÖĞÖ´ĞĞ£¬²»ÒªÔÚÀïÃæ×öºÄÊ±²Ù×÷£»ÍÆ¼öÖ»¸´ÖÆÊı¾İ¡¢
+ *   ÉèÖÃ±êÖ¾Î»£¬È»ºóÔÚÖ÷Ñ­»·Àï´¦ÀíÕæÕıµÄÒµÎñ¡£
+ */
+void BoardComm_RxFrameCallback(uint8_t cmd, const uint8_t *data, uint8_t len, BoardComm_Status status);
+
+/*
+ * ·¢ËÍÒ»Ö¡Êı¾İ¡£
+ * cmd  ÎªÃüÁî×Ö£¬data ÎªÊı¾İÇø£¬len ÎªÊı¾İ³¤¶È¡£
+ * µ± len Îª 0 Ê±£¬data ¿ÉÒÔ´« 0¡£
+ */
 BoardComm_Status BoardComm_Send(uint8_t cmd, const uint8_t *data, uint8_t len);
+
+/*
+ * ×èÈûÊ½½ÓÊÕÒ»Ö¡Êı¾İ¡£
+ * ¸Ã½Ó¿ÚÖ÷Òª±£Áô¸øÔçÆÚµ÷ÊÔÊ¹ÓÃ£»ÕıÊ½Á¬Ğø½ÓÊÕÍÆ¼öÊ¹ÓÃ¿ÕÏĞÖĞ¶Ï·½Ê½¡£
+ */
 BoardComm_Status BoardComm_Receive(uint8_t *cmd, uint8_t *data, uint8_t *len, uint32_t timeout);
+
+/* ·¢ËÍÒ»Ö¡ PING ÃüÁî£¬³£ÓÃÓÚ²âÊÔÁ½¿é°å´®¿ÚÁ¬ÏßÊÇ·ñÕı³£¡£ */
 BoardComm_Status BoardComm_Ping(void);
 
 #endif

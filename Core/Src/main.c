@@ -114,6 +114,7 @@ int main(void)
 	Delay_Init();
   AGC_Init();
   BoardComm_Init();
+  (void)BoardComm_StartReceiveToIdleIT();
 	AD9910_Init_1();
 	AD9910_Singal_Profile_Init_1();
 //	double Hz=900;

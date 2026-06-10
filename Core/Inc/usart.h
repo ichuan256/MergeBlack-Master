@@ -19,6 +19,7 @@ extern "C" {
 
 extern UART_HandleTypeDef huart3;
 
+/* USART3 用作板间通信串口：PB10=TX，PB11=RX，115200-8N1。 */
 void MX_USART3_UART_Init(void);
 
 #ifdef __cplusplus

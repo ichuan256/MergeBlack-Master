@@ -12,6 +12,14 @@
 
 UART_HandleTypeDef huart3;
 
+/*
+ * USART3 初始化
+ * ------------------------------------------------------------
+ * 用途：MergeBlack 与另一块板之间的简单 UART 通信。
+ * 引脚：PB10 = USART3_TX，PB11 = USART3_RX。
+ * 参数：115200 bps，8 数据位，1 停止位，无校验，无硬件流控。
+ * 上层协议见 User/Inc/BoardComm_User.h。
+ */
 void MX_USART3_UART_Init(void)
 {
 
