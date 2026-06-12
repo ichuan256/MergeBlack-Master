@@ -67,6 +67,9 @@
 /* 阻塞式发送使用的默认超时时间，单位 ms。 */
 #define BOARD_COMM_TIMEOUT_MS   20
 
+/* 命令字：发送矩阵键盘键值。数据区 1 字节，内容为 ASCII 键值，例如 '7'、'A'。 */
+#define BOARD_COMM_CMD_KEYPAD   0x10U
+
 /*
  * 板间通信函数返回值。
  * 这些状态既用于阻塞式收发，也用于中断接收回调中的解析结果。

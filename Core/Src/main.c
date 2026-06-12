@@ -30,6 +30,7 @@
 #include "ADF4351_User.h"
 #include "AGC_User.h"
 #include "BoardComm_User.h"
+#include "Keypad_User.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -115,6 +116,7 @@ int main(void)
   AGC_Init();
   BoardComm_Init();
   (void)BoardComm_StartReceiveToIdleIT();
+  Keypad_Init();
 	AD9910_Init_1();
 	AD9910_Singal_Profile_Init_1();
 //	double Hz=900;
@@ -137,17 +139,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		ADF4351_SetFreq(900);
+    Keypad_ScanTask();
+		ADF4351_SetFreq(Hz+=100);
 		
 		if(AD9226_Get_DMA_Complete_Flag()== Collect_complete)
 		{
 			HAL_TIM_DMABurst_MultiReadStart(&htim1,TIM_DMABASE_ARR,TIM_DMA_UPDATE,(uint32_t *)AD9226_Rec_Buf,15,1024);
 			AD9226_Set_DMA_collection_flag(Collect_complete_not);
 		}
-		HAL_Delay(1000);
-	  ADF4351_SetFreq(Hz+=100);
+		Keypad_DelayWithScan(1000);
+	  //ADF4351_SetFreq(Hz+=100);
 		//Hz+=100;
-    dds_output_sine(Hz,1,100);
+    //dds_output_sine(Hz,1,100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -214,6 +217,12 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void Keypad_EventCallback(char key)
+{
+  uint8_t payload = (uint8_t)key;
+
+  (void)BoardComm_Send(BOARD_COMM_CMD_KEYPAD, &payload, 1U);
+}
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim==&htim1)
