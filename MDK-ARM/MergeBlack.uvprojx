@@ -632,11 +632,6 @@
               <FilePath>..\User\Src\ADF4351_User.c</FilePath>
             </File>
             <File>
-              <FileName>AGC_User.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\Src\AGC_User.c</FilePath>
-            </File>
-            <File>
               <FileName>BoardComm_User.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\Src\BoardComm_User.c</FilePath>

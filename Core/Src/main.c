@@ -28,7 +28,6 @@
 #include "AD9226_User.h"
 #include "AD9910_User.h"
 #include "ADF4351_User.h"
-#include "AGC_User.h"
 #include "BoardComm_User.h"
 #include "Keypad_User.h"
 /* USER CODE END Includes */
@@ -113,7 +112,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //ADF4351_SetFreq(2000);
 	Delay_Init();
-  AGC_Init();
   BoardComm_Init();
   (void)BoardComm_StartReceiveToIdleIT();
   Keypad_Init();
