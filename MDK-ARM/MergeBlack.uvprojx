@@ -641,6 +641,11 @@
               <FileType>1</FileType>
               <FilePath>..\User\Src\Keypad_User.c</FilePath>
             </File>
+            <File>
+              <FileName>SpectrumSystem_User.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\Src\SpectrumSystem_User.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
